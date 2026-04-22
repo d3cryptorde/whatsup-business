@@ -28,7 +28,7 @@ jobs:
           # Alle .swift Dateien im aktuellen Verzeichnis und Unterordnern finden
           # Hinweis: Das Ziel-SDK ist iphoneos
           swiftc -sdk $(xcrun --sdk iphoneos --show-sdk-path) \
-                 -target arm64-apple-ios15.0 \
+                 -target arm64-apple-ios16.0 \
                  -emit-executable \
                  -o build/MyApp.app/MyApp \
                  $(find . -name "*.swift")
