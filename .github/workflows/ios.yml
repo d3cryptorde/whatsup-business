@@ -1,0 +1,47 @@
+name: Build Unsigned IPA (Swift Only)
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Create App Bundle Structure
+        run: |
+          # Verzeichnisstruktur für eine iOS App erstellen
+          mkdir -p build/MyApp.app
+          
+          # Info.plist kopieren (wichtig für iOS)
+          if [ -f "Info.plist" ]; then
+            cp Info.plist build/MyApp.app/
+          fi
+
+      - name: Compile Swift Files
+        run: |
+          # Alle .swift Dateien im aktuellen Verzeichnis und Unterordnern finden
+          # Hinweis: Das Ziel-SDK ist iphoneos
+          swiftc -sdk $(xcrun --sdk iphoneos --show-sdk-path) \
+                 -target arm64-apple-ios15.0 \
+                 -emit-executable \
+                 -o build/MyApp.app/MyApp \
+                 $(find . -name "*.swift")
+
+      - name: Create Unsigned IPA
+        run: |
+          mkdir -p build/Payload
+          cp -r build/MyApp.app build/Payload/
+          cd build
+          zip -r MyApp_unsigned.ipa Payload/
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: unsigned-ipa
+          path: build/MyApp_unsigned.ipa
