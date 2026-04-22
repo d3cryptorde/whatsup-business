@@ -1,4 +1,4 @@
-name: Build Unsigned IPA (Swift Only)
+name: Build Unsigned IPA
 
 on:
   push:
@@ -15,29 +15,47 @@ jobs:
 
       - name: Create App Bundle Structure
         run: |
-          # Verzeichnisstruktur für eine iOS App erstellen
-          mkdir -p build/MyApp.app
-          
-          # Info.plist kopieren (wichtig für iOS)
+          # Verzeichnisstruktur erstellen
+          mkdir -p build/Payload/MyApp.app
+
+      - name: Patch Info.plist
+        run: |
           if [ -f "Info.plist" ]; then
-            cp Info.plist build/MyApp.app/
+            cp Info.plist build/Payload/MyApp.app/Info.plist
+            
+            # Ersetzt die Xcode-Variablen durch statische Werte
+            # Du kannst 'com.d3cryptorde.app' nach Belieben anpassen
+            sed -i '' 's/$(PRODUCT_BUNDLE_IDENTIFIER)/com.d3cryptorde.app/g' build/Payload/MyApp.app/Info.plist
+            sed -i '' 's/$(EXECUTABLE_NAME)/MyApp/g' build/Payload/MyApp.app/Info.plist
+            sed -i '' 's/$(PRODUCT_NAME)/MyApp/g' build/Payload/MyApp.app/Info.plist
+            sed -i '' 's/$(PRODUCT_MODULE_NAME)/MyApp/g' build/Payload/MyApp.app/Info.plist
+          else
+            echo "WARNUNG: Keine Info.plist gefunden!"
           fi
 
       - name: Compile Swift Files
         run: |
-          # Alle .swift Dateien im aktuellen Verzeichnis und Unterordnern finden
-          # Hinweis: Das Ziel-SDK ist iphoneos
+          # Kompiliert alle Swift-Dateien für iOS 16 (Arm64)
           swiftc -sdk $(xcrun --sdk iphoneos --show-sdk-path) \
                  -target arm64-apple-ios16.0 \
                  -emit-executable \
-                 -o build/MyApp.app/MyApp \
+                 -o build/Payload/MyApp.app/MyApp \
                  $(find . -name "*.swift")
+          
+          # Sicherstellen, dass das Binary ausführbar ist
+          chmod +x build/Payload/MyApp.app/MyApp
+
+      - name: Copy Resources
+        run: |
+          # Falls du Bilder oder andere Dateien im Resources-Ordner hast
+          if [ -d "Resources" ]; then
+            cp -r Resources/* build/Payload/MyApp.app/
+          fi
 
       - name: Create Unsigned IPA
         run: |
-          mkdir -p build/Payload
-          cp -r build/MyApp.app build/Payload/
           cd build
+          # Die IPA muss den Payload-Ordner enthalten
           zip -r MyApp_unsigned.ipa Payload/
 
       - name: Upload Artifact
